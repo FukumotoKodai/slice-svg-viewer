@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Folder Image Viewer</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; }
+    #drop-zone { border: 2px dashed #888; padding: 60px 80px; margin: 80px 522px; }
+    img { max-width: 600px; height: auto; margin-top: 20px; }
+    input[type="range"] { width: 80%; margin: 10px 100px; }
+    button { margin: 10px; padding: 10px 20px; }
+  </style>
+</head>
+<body>
+  <h2>フォルダ内画像ビューア</h2>
+  <div id="drop-zone">ここにフォルダをドラッグ＆ドロップ</div>
+
+  <p>スライス位置（slice番号）</p>
+  <input type="range" id="sliceSlider" min="0" max="0" value="0">
+
+  <p>時間（t番号）</p>
+  <input type="range" id="timeSlider" min="0" max="0" value="0">
+
+  <button id="play">▶ 再生</button>
+  <button id="stop">⏹ 停止</button>
+
+  <img id="viewer" />
+
+<script>
+  const dropZone = document.getElementById("drop-zone");
+  const viewer = document.getElementById("viewer");
+  const sliceSlider = document.getElementById("sliceSlider");
+  const timeSlider = document.getElementById("timeSlider");
+
+  let structuredImages = {};  // structuredImages[slice][s] = url
+  let sliceKeys = [];
+  let sKeys = [];
+  let playInterval = null;
+
+  // ----------- Drag & Dropの処理 -----------
+  dropZone.addEventListener("dragover", e => {
+    e.preventDefault();
+    dropZone.style.background = "#eef";
+  });
+
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.style.background = "";
+  });
+
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.style.background = "";
+    structuredImages = {};
+    readItems(e.dataTransfer.items);
+  });
+
+  function readItems(items) {
+    for (const item of items) {
+      const entry = item.webkitGetAsEntry();
+      if (entry && entry.isDirectory) {
+        readAllDirectory(entry);
+        console.log("=== structuredImages ===");
+        console.log(structuredImages);
+
+      }
+    }
+  }
+
+  // ----------- (100件制限を回避) -----------
+  function readAllDirectory(dirEntry) {
+    const reader = dirEntry.createReader();
+    let entries = [];
+
+    function readBatch() {
+      reader.readEntries(batch => {
+        if (batch.length === 0) {
+          // 全エントリ読み込み完了
+          processEntries(entries);
+          return;
+        }
+        entries = entries.concat(batch);
+        readBatch();
+      });
+    }
+    readBatch();
+  }
+
+  function processEntries(entries) {
+    entries.forEach(entry => {
+      if (entry.isFile && /\.(png|jpg|jpeg|gif|bmp|svg)$/i.test(entry.name)) {
+        entry.file(file => {
+          const url = URL.createObjectURL(file);
+          const parsed = parseFilename(entry.name);
+          if (!parsed) return;
+
+          const { slice, s } = parsed;
+
+          if (!structuredImages[slice]) structuredImages[slice] = {};
+          structuredImages[slice][s] = url;
+
+          // 最新の slice / s 全部を更新
+          sliceKeys = Object.keys(structuredImages).sort((a,b)=>Number(a)-Number(b));
+
+          // 最初の slice の s リストを使う
+          sKeys = Object.keys(structuredImages[sliceKeys[0]]).sort((a,b)=>Number(a)-Number(b));
+
+          updateSliders();
+          updateImage();
+        });
+      }
+    });
+  }
+
+  // ----------- Filename Parser -----------
+  function parseFilename(name) {
+    //filename_example : y_slice_1_delta_density_s=0001000_t=3.503E-03
+    // match[1]にはslice_の後の数字、match[2]にはs=の後の数字
+    const match = name.match(/_slice_(\d+)_.*?_s=(\d+)/);
+    if (!match) return null;
+    return {
+      slice: match[1],
+      s: match[2]
+    };
+  }
+
+  // ----------- Slider Update -----------
+  function updateSliders() {
+    sliceSlider.max = sliceKeys.length - 1;
+    timeSlider.max = sKeys.length - 1;
+  }
+
+  // ----------- Image Update -----------
+  function updateImage() {
+    if (sliceKeys.length === 0) return;
+    //sliceSlider.value :: スライススライダーの現在値
+    //timeSlider.value :: 時間スライダーの現在値
+    //sliceKeys[sliceSlider.value] :: スライスに対応したスライス値
+    //sKeys[timeSlider.value] :: 時間スライダーに対応した時間値
+    const slice = sliceKeys[sliceSlider.value];
+    const s = sKeys[timeSlider.value];
+
+    if (structuredImages[slice] && structuredImages[slice][s]) {
+      viewer.src = structuredImages[slice][s];
+    }
+  }
+
+  sliceSlider.addEventListener("input", updateImage);
+  timeSlider.addEventListener("input", updateImage);
+
+  // ----------- Slideshow -----------
+  document.getElementById("play").addEventListener("click", () => {
+    if (playInterval) return;
+
+    playInterval = setInterval(() => {
+      let t = Number(timeSlider.value) + 1;
+      if (t > timeSlider.max) t = 0;
+      timeSlider.value = t;
+      updateImage();
+    }, 50);
+  });
+
+  document.getElementById("stop").addEventListener("click", () => {
+    clearInterval(playInterval);
+    playInterval = null;
+  });
+</script>
