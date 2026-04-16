@@ -4,17 +4,63 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Folder Image Viewer</title>
-  <style>
-    body { font-family: sans-serif; text-align: center; }
-    #drop-zone { border: 2px dashed #888; padding: 60px 80px; margin: 80px 522px; }
-    img { max-width: 600px; height: auto; margin-top: 20px; }
-    input[type="range"] { width: 80%; margin: 10px 100px; }
-    button { margin: 10px; padding: 10px 20px; }
+    <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+    }
+
+    #drop-zone {
+      border: 2px dashed #888;
+      padding: 5%;
+      margin: 5% auto;
+      width: 80%;
+      max-width: 800px;
+    }
+
+    input[type="range"] {
+      width: 80%;
+      margin: 10px auto;
+      display: block;
+    }
+
+    .viewer-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      width: 80%;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .viewer-container input[type="range"] {
+      width: 100%;
+      margin: 10px 0;
+    }
+
+    .viewer-container img {
+      width: 100%;
+      height: auto;
+    }
+
+    /*ボタンを画像の真下に *
+    .controls {
+      margin-top: 10px;
+      display: flex;
+      gap: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+    }
   </style>
 </head>
 <body>
   <h2>フォルダ内画像ビューア</h2>
   <div id="drop-zone">ここにフォルダをドラッグ＆ドロップ</div>
+
+  <div class="viewer-container">
 
   <p>スライス位置（slice番号）</p>
   <input type="range" id="sliceSlider" min="0" max="0" value="0">
@@ -22,10 +68,17 @@
   <p>時間（t番号）</p>
   <input type="range" id="timeSlider" min="0" max="0" value="0">
 
-  <button id="play">▶ 再生</button>
-  <button id="stop">⏹ 停止</button>
-
   <img id="viewer" />
+
+  <div class="controls">
+    <button id="play">▶ 再生</button>
+    <button id="stop">⏹ 停止</button>
+  </div>
+
+</div>
+
+</body>
+</html>
 
 <script>
   const dropZone = document.getElementById("drop-zone");
