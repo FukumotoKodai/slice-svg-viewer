@@ -2,4 +2,4 @@
 
 # Sample Image
 
-(image/useviewer.png)
+![Sample image showing enstrophy contour and velocity arrows](image/useviewer.png)
